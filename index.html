@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Carnet d’écoute</title>
+  <meta name="description" content="Carnet personnel de suivi des écoutes de podcasts.">
+  <meta name="theme-color" content="#eef1ee">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Carnet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/source-serif-4-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <p class="kicker" id="today"></p>
+      <h1>Carnet d’écoute</h1>
+      <p class="subtitle">Ce que j’entends, ce que je retiens.</p>
+    </header>
+
+    <section class="stats" aria-label="Statistiques">
+      <div class="stat-total">
+        <span class="stat-number" id="stat-total">0</span>
+        <span class="stat-label" id="stat-total-label">écoutes</span>
+      </div>
+      <ul class="stat-cats">
+        <li class="cat-culture"><span class="dot"></span><span class="stat-cat-name">Culture</span><span class="stat-cat-num" id="stat-culture">0</span></li>
+        <li class="cat-anglais"><span class="dot"></span><span class="stat-cat-name">Anglais</span><span class="stat-cat-num" id="stat-anglais">0</span></li>
+        <li class="cat-mission"><span class="dot"></span><span class="stat-cat-name">Mission</span><span class="stat-cat-num" id="stat-mission">0</span></li>
+      </ul>
+    </section>
+
+    <section class="sheet" aria-labelledby="form-title">
+      <h2 id="form-title">Nouvelle écoute</h2>
+      <form id="entry-form" autocomplete="off" novalidate>
+        <label class="field">
+          <span class="field-label">Podcast / épisode</span>
+          <input type="text" id="title" name="title" maxlength="200" placeholder="Ex. : La Méthode scientifique — Les trous noirs" required>
+        </label>
+
+        <fieldset class="field">
+          <legend class="field-label">Catégorie</legend>
+          <div class="cat-picker" role="radiogroup">
+            <label class="cat-option cat-culture">
+              <input type="radio" name="category" value="culture">
+              <span>Culture générale</span>
+            </label>
+            <label class="cat-option cat-anglais">
+              <input type="radio" name="category" value="anglais">
+              <span>Anglais</span>
+            </label>
+            <label class="cat-option cat-mission">
+              <input type="radio" name="category" value="mission">
+              <span>Projet mission</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <label class="field">
+          <span class="field-label">Ce que je retiens</span>
+          <textarea id="note" name="note" rows="5" placeholder="Une idée, une phrase, une piste à creuser…"></textarea>
+        </label>
+
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <button type="submit" class="btn-primary">Consigner l’écoute</button>
+      </form>
+    </section>
+
+    <section class="history" aria-labelledby="history-title">
+      <div class="history-head">
+        <h2 id="history-title">Historique</h2>
+        <div class="filters" role="group" aria-label="Filtrer par catégorie">
+          <button type="button" class="filter is-active" data-filter="all">Tout</button>
+          <button type="button" class="filter cat-culture" data-filter="culture">Culture</button>
+          <button type="button" class="filter cat-anglais" data-filter="anglais">Anglais</button>
+          <button type="button" class="filter cat-mission" data-filter="mission">Mission</button>
+        </div>
+      </div>
+      <ol class="entries" id="entries"></ol>
+      <p class="empty" id="empty">Aucune écoute pour l’instant. La première page attend.</p>
+    </section>
+
+    <footer class="colophon">
+      <details>
+        <summary>Sauvegarde des données</summary>
+        <p>Tes écoutes sont enregistrées uniquement sur cet appareil. Exporte-les de temps en temps pour en garder une copie.</p>
+        <div class="backup-actions">
+          <button type="button" class="btn-ghost" id="export-btn">Exporter (JSON)</button>
+          <label class="btn-ghost" for="import-file">Importer</label>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+        </div>
+        <p class="storage-info" id="storage-info"></p>
+      </details>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
