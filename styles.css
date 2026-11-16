@@ -328,3 +328,21 @@ input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
 @media (prefers-color-scheme: dark) {
   .filter.is-active { background: #31474f; box-shadow: none; }
 }
+
+/* Carte de statistiques claire en mode clair */
+@media (prefers-color-scheme: light) {
+  .stats {
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .stats-label { color: var(--ink-3); }
+  .stats-bar { background: var(--surface-2); }
+  .stats .cat-culture { --c: var(--culture); }
+  .stats .cat-anglais { --c: var(--anglais); }
+  .stats .cat-mission { --c: var(--mission); }
+  .stats-cats li { background: var(--cs); }
+  .stats-cat-num { color: var(--c); }
+  .stats-cat-name { color: var(--ink-2); }
+}
