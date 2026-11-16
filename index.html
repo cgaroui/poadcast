@@ -26,19 +26,25 @@
     </header>
 
     <section class="stats" aria-label="Statistiques">
-      <div class="stats-total">
-        <span class="stats-number" id="stat-total">0</span>
-        <span class="stats-label" id="stat-total-label">écoutes au total</span>
+      <div class="now">
+        <div class="now-art" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 10v4M9.5 7v10M14 4.5v15M18.5 8.5v7"/></svg>
+        </div>
+        <div class="now-text">
+          <span class="now-label">Dernière écoute</span>
+          <span class="now-title" id="last-title">Rien pour l’instant</span>
+          <span class="now-meta" id="last-meta">Ajoute ta première écoute</span>
+        </div>
+        <a class="now-play" id="last-play" target="_blank" rel="noopener noreferrer" aria-label="Réécouter la dernière écoute" hidden>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.8v14.4a.8.8 0 0 0 1.2.7l11.5-7.2a.8.8 0 0 0 0-1.4L8.2 4.1A.8.8 0 0 0 7 4.8z"/></svg>
+        </a>
       </div>
-      <div class="stats-bar" aria-hidden="true">
-        <span class="bar-seg cat-culture" id="bar-culture"></span>
-        <span class="bar-seg cat-anglais" id="bar-anglais"></span>
-        <span class="bar-seg cat-mission" id="bar-mission"></span>
-      </div>
-      <ul class="stats-cats">
-        <li class="cat-culture"><span class="dot"></span><span class="stats-cat-num" id="stat-culture">0</span><span class="stats-cat-name">Culture</span></li>
-        <li class="cat-anglais"><span class="dot"></span><span class="stats-cat-num" id="stat-anglais">0</span><span class="stats-cat-name">Anglais</span></li>
-        <li class="cat-mission"><span class="dot"></span><span class="stats-cat-num" id="stat-mission">0</span><span class="stats-cat-name">Mission</span></li>
+      <div class="wave" id="wave" aria-hidden="true"></div>
+      <ul class="stats-row">
+        <li class="stats-main"><span class="stats-num" id="stat-total">0</span><span class="stats-name" id="stat-total-label">écoutes</span></li>
+        <li class="cat-culture"><span class="stats-num" id="stat-culture">0</span><span class="stats-name"><span class="dot"></span>Culture</span></li>
+        <li class="cat-anglais"><span class="stats-num" id="stat-anglais">0</span><span class="stats-name"><span class="dot"></span>Anglais</span></li>
+        <li class="cat-mission"><span class="stats-num" id="stat-mission">0</span><span class="stats-name"><span class="dot"></span>Mission</span></li>
       </ul>
     </section>
 

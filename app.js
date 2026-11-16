@@ -157,18 +157,47 @@
     entries.sort(function (a, b) { return b.createdAt < a.createdAt ? -1 : b.createdAt > a.createdAt ? 1 : 0; });
   }
 
+  // Onde sonore décorative, différente pour chaque dernière écoute
+  function renderWave(seedText) {
+    var wave = $("wave");
+    var bars = 42;
+    var seed = 0;
+    for (var i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) >>> 0;
+    function rand() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    var frag = document.createDocumentFragment();
+    for (var j = 0; j < bars; j++) {
+      var envelope = 0.45 + 0.55 * Math.sin(Math.PI * (j + 0.5) / bars);
+      var h = Math.max(12, Math.round((0.3 + 0.7 * rand()) * envelope * 100));
+      var span = document.createElement("span");
+      span.style.height = h + "%";
+      if (j < Math.round(bars * 0.38)) span.className = "on";
+      frag.appendChild(span);
+    }
+    wave.replaceChildren(frag);
+  }
+
   function renderStats() {
     var counts = { culture: 0, anglais: 0, mission: 0 };
     entries.forEach(function (e) { if (counts.hasOwnProperty(e.category)) counts[e.category]++; });
     var total = entries.length;
     $("stat-total").textContent = total;
-    $("stat-total-label").textContent = total > 1 ? "écoutes au total" : "écoute au total";
-    Object.keys(counts).forEach(function (k) {
-      $("stat-" + k).textContent = counts[k];
-      var seg = $("bar-" + k);
-      seg.style.width = total ? "calc(" + (counts[k] / total * 100) + "% - 2px)" : "0";
-      seg.style.display = counts[k] ? "block" : "none";
-    });
+    $("stat-total-label").textContent = total > 1 ? "écoutes" : "écoute";
+    Object.keys(counts).forEach(function (k) { $("stat-" + k).textContent = counts[k]; });
+
+    var last = entries[0];
+    var play = $("last-play");
+    if (last) {
+      $("last-title").textContent = last.title;
+      $("last-meta").textContent = (CATEGORIES[last.category] || "") + " · " + formatDate(last.createdAt);
+      var u = normalizeUrl(last.url);
+      play.hidden = !u;
+      if (u) play.href = u; else play.removeAttribute("href");
+    } else {
+      $("last-title").textContent = "Rien pour l’instant";
+      $("last-meta").textContent = "Ajoute ta première écoute";
+      play.hidden = true;
+    }
+    renderWave(last ? last.id + last.title : "carnet");
   }
 
   function renderEntry(e) {
