@@ -1,14 +1,14 @@
 {
   "name": "Carnet d’écoute",
   "short_name": "Carnet",
-  "description": "Carnet personnel de suivi des écoutes de podcasts.",
+  "description": "Suivi personnel de mes écoutes de podcasts.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eef1ee",
-  "theme_color": "#eef1ee",
+  "background_color": "#f3f5f4",
+  "theme_color": "#f3f5f4",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

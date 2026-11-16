@@ -3,9 +3,9 @@
   "use strict";
 
   var CATEGORIES = {
-    culture: "Culture générale",
+    culture: "Culture",
     anglais: "Anglais",
-    mission: "Projet mission"
+    mission: "Mission"
   };
 
   /* ——————————————————— Stockage ——————————————————— */
@@ -32,8 +32,7 @@
       return dbPromise.then(function (db) {
         return new Promise(function (resolve, reject) {
           var t = db.transaction(STORE, mode);
-          var store = t.objectStore(STORE);
-          var result = fn(store);
+          var result = fn(t.objectStore(STORE));
           t.oncomplete = function () { resolve(result && "result" in result ? result.result : undefined); };
           t.onerror = function () { reject(t.error); };
           t.onabort = function () { reject(t.error || new Error("Transaction annulée")); };
@@ -98,50 +97,27 @@
     }).catch(function () { return lsStore(); });
   }
 
-  /* ——————————————————— État & rendu ——————————————————— */
-
-  var store = null;
-  var entries = [];
-  var filter = "all";
-  var lastAddedId = null;
+  /* ——————————————————— Utilitaires ——————————————————— */
 
   var $ = function (id) { return document.getElementById(id); };
-  var form = $("entry-form");
-  var list = $("entries");
-  var emptyMsg = $("empty");
-  var errorMsg = $("form-error");
 
-  var dateFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+  var dateFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   var timeFmt = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  var todayFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  var todayFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
 
   function formatDate(iso) {
     var d = new Date(iso);
-    return dateFmt.format(d) + " · " + timeFmt.format(d);
+    var diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+    var day = diffDays === 0 ? "Aujourd’hui" : diffDays === 1 ? "Hier" : dateFmt.format(d);
+    return day + " · " + timeFmt.format(d);
   }
 
   function uid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
-
-  function sortEntries() {
-    entries.sort(function (a, b) { return b.createdAt < a.createdAt ? -1 : b.createdAt > a.createdAt ? 1 : 0; });
-  }
-
-  function renderStats() {
-    var counts = { culture: 0, anglais: 0, mission: 0 };
-    entries.forEach(function (e) { if (counts.hasOwnProperty(e.category)) counts[e.category]++; });
-    $("stat-total").textContent = entries.length;
-    $("stat-total-label").textContent = entries.length > 1 ? "écoutes" : "écoute";
-    $("stat-culture").textContent = counts.culture;
-    $("stat-anglais").textContent = counts.anglais;
-    $("stat-mission").textContent = counts.mission;
-  }
-
-  var TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
-
-  var PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a.5.5 0 0 0 .77.42l10-6.5a.5.5 0 0 0 0-.84l-10-6.5A.5.5 0 0 0 8 5.5z"/></svg>';
 
   // N'accepte que les liens web (http/https) ; ajoute https:// si besoin.
   function normalizeUrl(value) {
@@ -156,28 +132,65 @@
     return "";
   }
 
+  function svg(paths, opts) {
+    return '<svg viewBox="0 0 24 24" fill="' + (opts && opts.fill ? "currentColor" : "none") +
+      '" stroke="' + (opts && opts.fill ? "none" : "currentColor") +
+      '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + "</svg>";
+  }
+  var ICON_EDIT = svg('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>');
+  var ICON_TRASH = svg('<path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>');
+  var ICON_PLAY = svg('<path d="M7 4.8v14.4a.8.8 0 0 0 1.2.7l11.5-7.2a.8.8 0 0 0 0-1.4L8.2 4.1A.8.8 0 0 0 7 4.8z"/>', { fill: true });
+
+  /* ——————————————————— État & rendu ——————————————————— */
+
+  var store = null;
+  var entries = [];
+  var filter = "all";
+  var lastChangedId = null;
+  var editingId = null;
+
+  var form = $("entry-form");
+  var list = $("entries");
+  var errorMsg = $("form-error");
+
+  function sortEntries() {
+    entries.sort(function (a, b) { return b.createdAt < a.createdAt ? -1 : b.createdAt > a.createdAt ? 1 : 0; });
+  }
+
+  function renderStats() {
+    var counts = { culture: 0, anglais: 0, mission: 0 };
+    entries.forEach(function (e) { if (counts.hasOwnProperty(e.category)) counts[e.category]++; });
+    var total = entries.length;
+    $("stat-total").textContent = total;
+    $("stat-total-label").textContent = total > 1 ? "écoutes au total" : "écoute au total";
+    Object.keys(counts).forEach(function (k) {
+      $("stat-" + k).textContent = counts[k];
+      var seg = $("bar-" + k);
+      seg.style.width = total ? "calc(" + (counts[k] / total * 100) + "% - 2px)" : "0";
+      seg.style.display = counts[k] ? "block" : "none";
+    });
+  }
+
   function renderEntry(e) {
     var li = document.createElement("li");
-    li.className = "entry cat-" + e.category + (e.id === lastAddedId ? " is-new" : "");
-    li.dataset.id = e.id;
+    li.className = "entry cat-" + e.category + (e.id === lastChangedId ? " is-new" : "");
 
-    var meta = document.createElement("div");
-    meta.className = "entry-meta";
-    var badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = CATEGORIES[e.category] || e.category;
+    var top = document.createElement("div");
+    top.className = "entry-top";
+    var chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = CATEGORIES[e.category] || e.category;
     var date = document.createElement("time");
     date.className = "entry-date";
     date.dateTime = e.createdAt;
     date.textContent = formatDate(e.createdAt);
-    meta.appendChild(badge);
-    meta.appendChild(date);
+    top.appendChild(chip);
+    top.appendChild(date);
+    li.appendChild(top);
 
     var title = document.createElement("h3");
     title.className = "entry-title";
     title.textContent = e.title;
-
-    li.appendChild(meta);
     li.appendChild(title);
 
     if (e.note) {
@@ -194,24 +207,37 @@
       link.href = safeUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.innerHTML = PLAY_SVG;
+      var icon = document.createElement("span");
+      icon.className = "entry-link-icon";
+      icon.innerHTML = ICON_PLAY;
       var label = document.createElement("span");
       label.textContent = "Réécouter";
       var host = document.createElement("span");
       host.className = "entry-link-host";
-      try { host.textContent = new URL(safeUrl).hostname.replace(/^www\./, ""); } catch (err) { host.textContent = ""; }
+      try { host.textContent = new URL(safeUrl).hostname.replace(/^(www|open|m)\./, ""); } catch (err) { host.textContent = ""; }
+      link.appendChild(icon);
       link.appendChild(label);
       link.appendChild(host);
       li.appendChild(link);
     }
 
+    var actions = document.createElement("div");
+    actions.className = "entry-actions";
+    var edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "icon-btn";
+    edit.setAttribute("aria-label", "Modifier « " + e.title + " »");
+    edit.innerHTML = ICON_EDIT;
+    edit.addEventListener("click", function () { openSheet(e.id); });
     var del = document.createElement("button");
     del.type = "button";
-    del.className = "entry-delete";
+    del.className = "icon-btn danger";
     del.setAttribute("aria-label", "Supprimer « " + e.title + " »");
-    del.innerHTML = TRASH_SVG;
+    del.innerHTML = ICON_TRASH;
     del.addEventListener("click", function () { deleteEntry(e.id); });
-    li.appendChild(del);
+    actions.appendChild(edit);
+    actions.appendChild(del);
+    li.appendChild(actions);
 
     return li;
   }
@@ -221,16 +247,20 @@
     var frag = document.createDocumentFragment();
     visible.forEach(function (e) { frag.appendChild(renderEntry(e)); });
     list.replaceChildren(frag);
-    emptyMsg.hidden = visible.length > 0;
-    emptyMsg.textContent = entries.length === 0
-      ? "Aucune écoute pour l’instant. La première page attend."
-      : "Aucune écoute dans cette catégorie.";
+    $("empty").hidden = visible.length > 0;
+    if (entries.length === 0) {
+      $("empty-title").textContent = "Aucune écoute pour l’instant";
+      $("empty-text").textContent = "Appuie sur « Ajouter » après ton prochain podcast.";
+    } else {
+      $("empty-title").textContent = "Rien dans cette catégorie";
+      $("empty-text").textContent = "Tes écoutes " + CATEGORIES[filter].toLowerCase() + " apparaîtront ici.";
+    }
   }
 
   function render() {
     renderStats();
     renderList();
-    lastAddedId = null;
+    lastChangedId = null;
   }
 
   /* ——————————————————— Toast ——————————————————— */
@@ -254,15 +284,69 @@
       toastEl.appendChild(btn);
     }
     toastEl.classList.add("is-visible");
-    toastTimer = setTimeout(function () { toastEl.classList.remove("is-visible"); }, actionLabel ? 6000 : 2500);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("is-visible"); }, actionLabel ? 6000 : 2200);
   }
 
-  /* ——————————————————— Actions ——————————————————— */
+  /* ——————————————————— Feuille ajout / modification ——————————————————— */
+
+  var sheet = $("sheet");
+  var backdrop = $("sheet-backdrop");
+  var closeTimer = null;
+  var pendingReload = false;
 
   function showError(msg) {
     errorMsg.textContent = msg;
     errorMsg.hidden = !msg;
   }
+
+  function openSheet(id) {
+    clearTimeout(closeTimer);
+    var entry = id ? entries.find(function (e) { return e.id === id; }) : null;
+    editingId = entry ? entry.id : null;
+    form.reset();
+    showError("");
+    $("sheet-title").textContent = entry ? "Modifier l’écoute" : "Nouvelle écoute";
+    $("submit-btn").textContent = entry ? "Enregistrer les modifications" : "Enregistrer";
+    if (entry) {
+      $("title").value = entry.title;
+      $("note").value = entry.note || "";
+      $("url").value = entry.url || "";
+      var radio = form.querySelector('input[name="category"][value="' + entry.category + '"]');
+      if (radio) radio.checked = true;
+    }
+    sheet.hidden = false;
+    backdrop.hidden = false;
+    document.body.classList.add("sheet-open");
+    // laisse le navigateur appliquer l'état initial avant l'animation
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        sheet.classList.add("is-open");
+        backdrop.classList.add("is-open");
+      });
+    });
+    sheet.scrollTop = 0;
+    if (!entry) setTimeout(function () { $("title").focus(); }, 320);
+  }
+
+  function closeSheet() {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    sheet.classList.remove("is-open");
+    backdrop.classList.remove("is-open");
+    document.body.classList.remove("sheet-open");
+    closeTimer = setTimeout(function () {
+      sheet.hidden = true;
+      backdrop.hidden = true;
+    }, 320);
+    editingId = null;
+    if (pendingReload) setTimeout(function () { window.location.reload(); }, 350);
+  }
+
+  $("add-btn").addEventListener("click", function () { openSheet(null); });
+  $("sheet-close").addEventListener("click", closeSheet);
+  backdrop.addEventListener("click", closeSheet);
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !sheet.hidden) closeSheet();
+  });
 
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
@@ -274,32 +358,30 @@
 
     if (!title) { showError("Indique le titre du podcast ou de l’épisode."); $("title").focus(); return; }
     if (!checked) { showError("Choisis une catégorie."); return; }
-    if (rawUrl && !url) { showError("Le lien ne semble pas valide (ex. : https://youtu.be/…)."); $("url").focus(); return; }
+    if (rawUrl && !url) { showError("Ce lien ne semble pas valide (ex. : https://youtu.be/…)."); $("url").focus(); return; }
     showError("");
 
+    var existing = editingId ? entries.find(function (e) { return e.id === editingId; }) : null;
     var entry = {
-      id: uid(),
+      id: existing ? existing.id : uid(),
       title: title,
       category: checked.value,
       note: note,
       url: url,
-      createdAt: new Date().toISOString()
+      createdAt: existing ? existing.createdAt : new Date().toISOString()
     };
+    if (existing) entry.updatedAt = new Date().toISOString();
 
-    form.reset();
     store.put(entry).then(function () {
+      entries = entries.filter(function (e) { return e.id !== entry.id; });
       entries.push(entry);
       sortEntries();
-      lastAddedId = entry.id;
+      lastChangedId = entry.id;
       if (filter !== "all" && filter !== entry.category) setFilter("all");
+      closeSheet();
       render();
-      document.activeElement && document.activeElement.blur();
-      toast("Écoute consignée.");
+      toast(existing ? "Modifications enregistrées" : "Écoute enregistrée");
     }).catch(function (err) {
-      $("title").value = title;
-      $("note").value = note;
-      $("url").value = rawUrl;
-      checked.checked = true;
       showError("Impossible d’enregistrer : " + (err && err.message ? err.message : "erreur de stockage"));
     });
   });
@@ -310,7 +392,7 @@
     store.remove(id).then(function () {
       entries = entries.filter(function (e) { return e.id !== id; });
       render();
-      toast("Écoute supprimée.", "Annuler", function () {
+      toast("Écoute supprimée", "Annuler", function () {
         store.put(entry).then(function () {
           entries.push(entry);
           sortEntries();
@@ -349,11 +431,11 @@
       navigator.share({ files: [file], title: name }).catch(function () {});
       return;
     }
-    var url = URL.createObjectURL(blob);
+    var href = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    a.href = url; a.download = name;
+    a.href = href; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    setTimeout(function () { URL.revokeObjectURL(href); }, 1000);
   });
 
   $("import-file").addEventListener("change", function (ev) {
@@ -369,14 +451,16 @@
           return e && typeof e.id === "string" && typeof e.title === "string" &&
             CATEGORIES.hasOwnProperty(e.category) && typeof e.createdAt === "string";
         }).map(function (e) {
-          return { id: e.id, title: e.title, category: e.category, note: typeof e.note === "string" ? e.note : "", url: normalizeUrl(e.url), createdAt: e.createdAt };
+          var clean = { id: e.id, title: e.title, category: e.category, note: typeof e.note === "string" ? e.note : "", url: normalizeUrl(e.url), createdAt: e.createdAt };
+          if (typeof e.updatedAt === "string") clean.updatedAt = e.updatedAt;
+          return clean;
         });
         store.putMany(valid).then(function () { return store.all(); }).then(function (all) {
           entries = all; sortEntries(); render();
-          toast(valid.length + " écoute" + (valid.length > 1 ? "s" : "") + " importée" + (valid.length > 1 ? "s" : "") + ".");
+          toast(valid.length + " écoute" + (valid.length > 1 ? "s importées" : " importée"));
         });
       } catch (e) {
-        toast("Fichier non reconnu.");
+        toast("Fichier non reconnu");
       }
       ev.target.value = "";
     };
@@ -403,7 +487,7 @@
       }).catch(function () {});
     }
   }).catch(function (err) {
-    showError("Le stockage local est indisponible : " + (err && err.message ? err.message : ""));
+    toast("Stockage local indisponible : " + (err && err.message ? err.message : ""));
   });
 
   if ("serviceWorker" in navigator) {
@@ -413,10 +497,17 @@
     navigator.serviceWorker.addEventListener("controllerchange", function () {
       if (!hadController || reloaded) return;
       reloaded = true;
+      // Ne recharge pas pendant une saisie : attend la fermeture de la feuille.
+      if (!sheet.hidden) { pendingReload = true; return; }
       window.location.reload();
     });
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        // Vérifie les mises à jour à chaque retour dans l'app
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") reg.update().catch(function () {});
+        });
+      }).catch(function () {});
     });
   }
 })();

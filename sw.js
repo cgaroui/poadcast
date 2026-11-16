@@ -1,12 +1,11 @@
 /* Service worker : met l'app en cache pour un fonctionnement 100 % hors ligne. */
-var CACHE = "carnet-ecoute-v2";
+var CACHE = "carnet-ecoute-v3";
 var ASSETS = [
   "./",
   "index.html",
   "styles.css",
   "app.js",
   "manifest.webmanifest",
-  "fonts/source-serif-4-latin-wght-normal.woff2",
   "fonts/inter-latin-wght-normal.woff2",
   "icons/icon-192.png",
   "icons/icon-512.png",
