@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour un fonctionnement 100 % hors ligne. */
-var CACHE = "carnet-ecoute-v4";
+var CACHE = "carnet-ecoute-v5";
 var ASSETS = [
   "./",
   "index.html",

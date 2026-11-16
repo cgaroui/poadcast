@@ -48,17 +48,27 @@
       </ul>
     </section>
 
-    <section class="history" aria-labelledby="history-title">
-      <div class="history-head">
-        <h2 id="history-title">Historique</h2>
+    <section class="history" aria-label="Historique et notes">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab is-active" role="tab" data-view="entries" aria-selected="true">Écoutes</button>
+        <button type="button" class="tab" role="tab" data-view="notes" aria-selected="false">Mes notes</button>
       </div>
-      <div class="filters" role="group" aria-label="Filtrer par catégorie">
+
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="search" placeholder="Rechercher" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+      </label>
+
+      <div class="filters" id="filters-entries" role="group" aria-label="Filtrer par catégorie">
         <button type="button" class="filter is-active" data-filter="all" aria-pressed="true">Tout</button>
         <button type="button" class="filter cat-culture" data-filter="culture" aria-pressed="false">Culture</button>
         <button type="button" class="filter cat-anglais" data-filter="anglais" aria-pressed="false">Anglais</button>
         <button type="button" class="filter cat-mission" data-filter="mission" aria-pressed="false">Mission</button>
       </div>
+      <div class="type-filters" id="filters-notes" role="group" aria-label="Filtrer par type de note" hidden></div>
+
       <ol class="entries" id="entries"></ol>
+      <ol class="notes-list" id="notes-list" hidden></ol>
       <div class="empty" id="empty" hidden>
         <div class="empty-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -120,10 +130,18 @@
         </div>
       </fieldset>
 
-      <label class="field">
+      <div class="field">
         <span class="field-label">Ce que je retiens</span>
-        <textarea id="note" name="note" rows="4" placeholder="Une idée, une phrase, une piste à creuser…"></textarea>
-      </label>
+        <ul class="draft-notes" id="draft-notes"></ul>
+        <div class="composer">
+          <div class="type-picker" id="type-picker" role="radiogroup" aria-label="Type de note"></div>
+          <textarea id="note-text" rows="3" placeholder="Une idée, une phrase, une piste à creuser…"></textarea>
+          <button type="button" class="btn-add-note" id="add-note-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Ajouter cette note
+          </button>
+        </div>
+      </div>
 
       <label class="field">
         <span class="field-label">Lien <span class="optional">facultatif</span></span>
