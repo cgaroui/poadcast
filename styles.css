@@ -112,7 +112,9 @@ h1 { font-size: 38px; line-height: 1.05; }
   color: var(--ink-soft);
 }
 
-input[type="text"], textarea {
+.optional { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-faint); }
+
+input[type="text"], input[type="url"], textarea {
   width: 100%;
   font: inherit; font-size: 17px; /* ≥16px : évite le zoom auto d’iOS */
   color: var(--ink);
@@ -129,8 +131,8 @@ textarea {
   background-attachment: local;
   background-position: 0 13px;
 }
-input[type="text"]::placeholder, textarea::placeholder { color: var(--ink-faint); }
-input[type="text"]:focus, textarea:focus {
+input[type="text"]::placeholder, input[type="url"]::placeholder, textarea::placeholder { color: var(--ink-faint); }
+input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
   outline: none; border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(169, 129, 47, 0.18);
 }
@@ -202,6 +204,19 @@ input[type="text"]:focus, textarea:focus {
   margin: 8px 0 0; color: var(--ink-soft); font-family: var(--serif); font-size: 16.5px; line-height: 1.55;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.entry-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px; margin-top: 10px; padding: 6px 14px 6px 10px;
+  border: 1px solid var(--c); border-radius: 999px;
+  color: var(--c); background: var(--t);
+  font-size: 14px; font-weight: 600; text-decoration: none;
+  max-width: 100%;
+}
+.entry-link svg { width: 16px; height: 16px; flex: none; }
+.entry-link-host { font-weight: 400; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-link-host:not(:empty)::before { content: "· "; }
+.entry-link:active { filter: brightness(.95); }
+
 .entry-delete {
   position: absolute; top: 10px; right: -6px;
   width: 44px; height: 44px; display: grid; place-items: center;

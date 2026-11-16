@@ -141,6 +141,21 @@
 
   var TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
 
+  var PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a.5.5 0 0 0 .77.42l10-6.5a.5.5 0 0 0 0-.84l-10-6.5A.5.5 0 0 0 8 5.5z"/></svg>';
+
+  // N'accepte que les liens web (http/https) ; ajoute https:// si besoin.
+  function normalizeUrl(value) {
+    if (typeof value !== "string") return "";
+    var v = value.trim();
+    if (!v) return "";
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = "https://" + v;
+    try {
+      var u = new URL(v);
+      if ((u.protocol === "http:" || u.protocol === "https:") && u.hostname.indexOf(".") > 0) return u.href;
+    } catch (err) {}
+    return "";
+  }
+
   function renderEntry(e) {
     var li = document.createElement("li");
     li.className = "entry cat-" + e.category + (e.id === lastAddedId ? " is-new" : "");
@@ -170,6 +185,24 @@
       note.className = "entry-note";
       note.textContent = e.note;
       li.appendChild(note);
+    }
+
+    var safeUrl = normalizeUrl(e.url);
+    if (safeUrl) {
+      var link = document.createElement("a");
+      link.className = "entry-link";
+      link.href = safeUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.innerHTML = PLAY_SVG;
+      var label = document.createElement("span");
+      label.textContent = "Réécouter";
+      var host = document.createElement("span");
+      host.className = "entry-link-host";
+      try { host.textContent = new URL(safeUrl).hostname.replace(/^www\./, ""); } catch (err) { host.textContent = ""; }
+      link.appendChild(label);
+      link.appendChild(host);
+      li.appendChild(link);
     }
 
     var del = document.createElement("button");
@@ -236,9 +269,12 @@
     var title = $("title").value.trim();
     var checked = form.querySelector('input[name="category"]:checked');
     var note = $("note").value.trim();
+    var rawUrl = $("url").value.trim();
+    var url = normalizeUrl(rawUrl);
 
     if (!title) { showError("Indique le titre du podcast ou de l’épisode."); $("title").focus(); return; }
     if (!checked) { showError("Choisis une catégorie."); return; }
+    if (rawUrl && !url) { showError("Le lien ne semble pas valide (ex. : https://youtu.be/…)."); $("url").focus(); return; }
     showError("");
 
     var entry = {
@@ -246,6 +282,7 @@
       title: title,
       category: checked.value,
       note: note,
+      url: url,
       createdAt: new Date().toISOString()
     };
 
@@ -261,6 +298,7 @@
     }).catch(function (err) {
       $("title").value = title;
       $("note").value = note;
+      $("url").value = rawUrl;
       checked.checked = true;
       showError("Impossible d’enregistrer : " + (err && err.message ? err.message : "erreur de stockage"));
     });
@@ -331,7 +369,7 @@
           return e && typeof e.id === "string" && typeof e.title === "string" &&
             CATEGORIES.hasOwnProperty(e.category) && typeof e.createdAt === "string";
         }).map(function (e) {
-          return { id: e.id, title: e.title, category: e.category, note: typeof e.note === "string" ? e.note : "", createdAt: e.createdAt };
+          return { id: e.id, title: e.title, category: e.category, note: typeof e.note === "string" ? e.note : "", url: normalizeUrl(e.url), createdAt: e.createdAt };
         });
         store.putMany(valid).then(function () { return store.all(); }).then(function (all) {
           entries = all; sortEntries(); render();
@@ -369,6 +407,14 @@
   });
 
   if ("serviceWorker" in navigator) {
+    // Quand une nouvelle version de l'app est installée, recharge une fois pour l'afficher.
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("sw.js").catch(function () {});
     });

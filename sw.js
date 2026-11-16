@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour un fonctionnement 100 % hors ligne. */
-var CACHE = "carnet-ecoute-v1";
+var CACHE = "carnet-ecoute-v2";
 var ASSETS = [
   "./",
   "index.html",
@@ -16,7 +16,10 @@ var ASSETS = [
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE).then(function (cache) { return cache.addAll(ASSETS); })
+    caches.open(CACHE).then(function (cache) {
+      // cache: "reload" force le téléchargement depuis le serveur (pas le cache HTTP du navigateur)
+      return cache.addAll(ASSETS.map(function (url) { return new Request(url, { cache: "reload" }); }));
+    })
       .then(function () { return self.skipWaiting(); })
   );
 });
